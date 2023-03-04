@@ -1,5 +1,4 @@
-use reqwest::{blocking::Client, header::{HeaderMap, AUTHORIZATION, CONTENT_TYPE}};
-use clap::{App, Arg};
+use reqwest::{blocking::Client, header::{HeaderMap, CONTENT_TYPE}};
 use std::env;
 use std::error::Error;
 use std::io::{self, Write};
@@ -90,24 +89,11 @@ fn get_first_choice_content(response: &Response) -> Option<&str> {
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let matches = App::new("ChatBot")
-        .version("1.0")
-        .author("Your Name <you@example.com>")
-        .about("Interacts with OpenAI's GPT-3 Chat API")
-        .arg(
-            Arg::with_name("message")
-                .short('m')
-                .long("message")
-                .value_name("MESSAGE")
-                .help("The message to send to the chatbot")
-                .takes_value(true),
-        )
-        .get_matches();
-
     let mut chatbot = ChatBot::new(env::var("OPENAI_API_KEY")?);
+    println!("Export your API key as OPENAI_API_KEY. Enter 'exit' to quit");
 
     loop {
-        print!("Enter your message (or 'exit' to quit): ");
+        print!("> Enter your message: ");
         io::stdout().flush().unwrap();
 
         let mut input = String::new();
