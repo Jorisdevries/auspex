@@ -29,7 +29,7 @@ impl ChatBot {
         let request = Request {
         model: String::from("gpt-3.5-turbo"),
             messages: vec![Message {
-                role: String::from("user"),
+                role: Some(String::from("user")),
                 content: message.to_string(),
             }],
         };
@@ -54,15 +54,15 @@ struct Request {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Message {
-    role: String,
+    role: Option<String>,
     content: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Response {
-    id: String,
-    object: String,
-    created: i64,
+    id: Option<String>,
+    object: Option<String>,
+    created: Option<i64>,
     choices: Vec<Choice>,
     usage: Usage,
 }
@@ -71,7 +71,7 @@ struct Response {
 struct Choice {
     index: usize,
     message: Message,
-    finish_reason: String,
+    finish_reason: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
