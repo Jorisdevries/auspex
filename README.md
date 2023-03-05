@@ -1,5 +1,8 @@
 # auspex
-A command line application that calls OpenAI's gpt-3.5-turbo model via their API.
+A command line application that calls OpenAI's `gpt-3.5-turbo` model via their API.
+
+## Usage
+Generate an OpenAI API key and export it as an environment variable called `OPENAI_API_KEY`.
 
 ## System instructions
 The tool will prompt you to provide optional system instructions to help guide the model's responses. Here is an example of a prompt that guides the model to help you learn Italian:
