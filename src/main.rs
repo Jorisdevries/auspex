@@ -7,6 +7,7 @@ struct ChatBot {
     api_key: String,
     client: Client,
     headers: HeaderMap,
+    messages: Vec<Message>,
     responses: Vec<Response>,
 }
 
@@ -20,31 +21,25 @@ impl ChatBot {
             api_key,
             client,
             headers,
+            messages: Vec::new(),
             responses: Vec::new(),
         }
     }
 
-    fn send_message(&mut self, system_instruction: &str, message: &str) -> reqwest::Result<()> {
+    fn send_message(&mut self, role: &str, message: &str) -> reqwest::Result<()> {
         let url = "https://api.openai.com/v1/chat/completions";
+        let headers = self.headers.clone();
 
-        let mut messages = vec![Message {
-                role: Some(String::from("user")),
-                content: message.to_string(),
-            }];
-
-        if system_instruction != "" {
-            messages.insert(0, Message { 
-                role: Some(String::from("system")),
-                content: (system_instruction.to_string()) 
-            })
-        }
+        self.messages.push(Message { 
+            role: Some(String::from(role)),
+            content: (message.to_string()) 
+        });
 
         let request = Request {
-        model: String::from("gpt-3.5-turbo"),
-            messages, 
+            model: String::from("gpt-3.5-turbo"),
+            messages: (*self.messages).to_vec(), 
         };
 
-        let headers = self.headers.clone();
         let response = self.client.post(url)
             .headers(headers)
             .bearer_auth(&self.api_key)
@@ -63,7 +58,7 @@ struct Request {
     messages: Vec<Message>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 struct Message {
     role: Option<String>,
     content: String,
@@ -112,6 +107,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("> Provide a system instruction. Leave blank to skip.");
     let system_instruction = get_user_input();
+    chatbot.send_message("system", system_instruction.as_str())?;
 
     loop {
         print!("> Enter your message: ");
@@ -121,7 +117,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             break;
         }
 
-        chatbot.send_message(system_instruction.as_str(), input.as_str())?;
+        chatbot.send_message("user", input.as_str())?;
         let response = get_first_choice_content(chatbot.responses.last().unwrap()).unwrap();
         println!("{}", response); 
     }
