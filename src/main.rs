@@ -24,15 +24,26 @@ impl ChatBot {
         }
     }
 
-    fn send_message(&mut self, message: &str) -> reqwest::Result<()> {
+    fn send_message(&mut self, system_instruction: &str, message: &str) -> reqwest::Result<()> {
         let url = "https://api.openai.com/v1/chat/completions";
-        let request = Request {
-        model: String::from("gpt-3.5-turbo"),
-            messages: vec![Message {
+
+        let mut messages = vec![Message {
                 role: Some(String::from("user")),
                 content: message.to_string(),
-            }],
+            }];
+
+        if system_instruction != "" {
+            messages.insert(0, Message { 
+                role: Some(String::from("system")),
+                content: (system_instruction.to_string()) 
+            })
+        }
+
+        let request = Request {
+        model: String::from("gpt-3.5-turbo"),
+            messages, 
         };
+
         let headers = self.headers.clone();
         let response = self.client.post(url)
             .headers(headers)
@@ -87,25 +98,30 @@ fn get_first_choice_content(response: &Response) -> Option<&str> {
         .map(|choice| choice.message.content.trim()) // Get the content string and trim whitespace
 }
 
+fn get_user_input() -> String {
+    let mut input = String::new();
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut input).expect("Failed to read line");
+    input.trim().to_string()
+}
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut chatbot = ChatBot::new(env::var("OPENAI_API_KEY")?);
-    println!("Export your API key as OPENAI_API_KEY. Enter 'exit' to quit");
+    println!("INFO: Export your API key as OPENAI_API_KEY. Enter 'q', quit' or 'exit' to quit");
+
+    println!("> Provide a system instruction. Leave blank to skip.");
+    let system_instruction = get_user_input();
 
     loop {
         print!("> Enter your message: ");
-        io::stdout().flush().unwrap();
+        let input = get_user_input();
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-
-        let input = input.trim();
-
-        if input == "exit" {
+        if input == "q" || input == "quit" || input == "exit" {
             break;
         }
 
-        chatbot.send_message(input)?;
+        chatbot.send_message(system_instruction.as_str(), input.as_str())?;
         let response = get_first_choice_content(chatbot.responses.last().unwrap()).unwrap();
         println!("{}", response); 
     }
