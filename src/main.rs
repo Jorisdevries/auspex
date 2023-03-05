@@ -107,7 +107,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("> Provide a system instruction. Leave blank to skip.");
     let system_instruction = get_user_input();
-    chatbot.send_message("system", system_instruction.as_str())?;
+
+    if system_instruction != "" {
+        chatbot.send_message("system", system_instruction.as_str())?;
+    } 
 
     loop {
         print!("> Enter your message: ");
