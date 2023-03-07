@@ -1,4 +1,8 @@
-use reqwest::{blocking::Client, header::{HeaderMap, CONTENT_TYPE}};
+use colored::Colorize;
+use reqwest::{
+    blocking::Client,
+    header::{HeaderMap, CONTENT_TYPE},
+};
 use std::env;
 use std::error::Error;
 use std::io::{self, Write};
@@ -30,17 +34,19 @@ impl ChatBot {
         let url = "https://api.openai.com/v1/chat/completions";
         let headers = self.headers.clone();
 
-        self.messages.push(Message { 
+        self.messages.push(Message {
             role: Some(String::from(role)),
-            content: (message.to_string()) 
+            content: (message.to_string()),
         });
 
         let request = Request {
             model: String::from("gpt-3.5-turbo"),
-            messages: (*self.messages).to_vec(), 
+            messages: (*self.messages).to_vec(),
         };
 
-        let response = self.client.post(url)
+        let response = self
+            .client
+            .post(url)
             .headers(headers)
             .bearer_auth(&self.api_key)
             .json(&request)
@@ -88,7 +94,8 @@ struct Usage {
 }
 
 fn get_first_choice_content(response: &Response) -> Option<&str> {
-    response.choices
+    response
+        .choices
         .first() // Get a reference to the first choice
         .map(|choice| choice.message.content.trim()) // Get the content string and trim whitespace
 }
@@ -96,21 +103,28 @@ fn get_first_choice_content(response: &Response) -> Option<&str> {
 fn get_user_input() -> String {
     let mut input = String::new();
     io::stdout().flush().unwrap();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
     input.trim().to_string()
 }
 
-
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut chatbot = ChatBot::new(env::var("OPENAI_API_KEY")?);
     println!("INFO: Export your API key as OPENAI_API_KEY. Enter 'q', quit' or 'exit' to quit");
+
+    if let Some(_var) = env::var_os("OPENAI_API_KEY") {
+    } else {
+        panic!("The environment variable OPENAI_API_KEY does not exist");
+    }
+
+    let mut chatbot = ChatBot::new(env::var("OPENAI_API_KEY")?);
 
     println!("> Provide a system instruction. Leave blank to skip.");
     let system_instruction = get_user_input();
 
     if system_instruction != "" {
         chatbot.send_message("system", system_instruction.as_str())?;
-    } 
+    }
 
     loop {
         print!("> Enter your message: ");
@@ -122,7 +136,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         chatbot.send_message("user", input.as_str())?;
         let response = get_first_choice_content(chatbot.responses.last().unwrap()).unwrap();
-        println!("{}", response); 
+        println!("{}", response.blue());
     }
 
     Ok(())
