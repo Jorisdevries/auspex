@@ -53,6 +53,13 @@ impl ChatBot {
             .send()?
             .json::<Response>()?;
 
+        let response_content = get_response_content(&response);
+
+        self.messages.push(Message {
+            role: Some(String::from("assistant")),
+            content: (response_content.unwrap().to_string()),
+        });
+
         self.responses.push(response);
         Ok(())
     }
@@ -93,7 +100,7 @@ struct Usage {
     total_tokens: usize,
 }
 
-fn get_first_choice_content(response: &Response) -> Option<&str> {
+fn get_response_content(response: &Response) -> Option<&str> {
     response
         .choices
         .first() // Get a reference to the first choice
@@ -135,7 +142,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         chatbot.send_message("user", input.as_str())?;
-        let response = get_first_choice_content(chatbot.responses.last().unwrap()).unwrap();
+        let response = get_response_content(chatbot.responses.last().unwrap()).unwrap();
         println!("{}", response.blue());
     }
 
