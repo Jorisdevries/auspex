@@ -60,6 +60,18 @@ impl ChatBot {
 
         let response_content = get_response_content(&response);
 
+        match response_content {
+            Some(x) => {
+                self.messages.push(Message {
+                    role: Some(String::from("assistant")),
+                    content: (x.to_string()),
+                });
+            },
+            None => {
+                println!("Response contained nothing");
+            },
+        }
+
         self.messages.push(Message {
             role: Some(String::from("assistant")),
             content: (response_content.unwrap().to_string()),
@@ -123,10 +135,14 @@ struct Usage {
 }
 
 fn get_response_content(response: &Response) -> Option<&str> {
-    response
-        .choices
-        .first() // Get a reference to the first choice
-        .map(|choice| choice.message.content.trim()) // Get the content string and trim whitespace
+    if response.choices.len() >= 1 {
+        response
+            .choices
+            .first() // Get a reference to the first choice
+            .map(|choice| choice.message.content.trim()) // Get the content string and trim whitespace
+    } else{
+        return None;
+    }
 }
 
 fn get_user_input() -> String {
