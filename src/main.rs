@@ -6,11 +6,14 @@ use reqwest::{
 use std::env;
 use std::error::Error;
 use std::io::{self, Write};
+use std::time::Duration;
 
 struct ChatBot {
     api_key: String,
     client: Client,
     headers: HeaderMap,
+    n_retries: u32, 
+    retry_delay: Duration,
     messages: Vec<Message>,
     responses: Vec<Response>,
 }
@@ -25,6 +28,8 @@ impl ChatBot {
             api_key,
             client,
             headers,
+            n_retries: 3, 
+            retry_delay: Duration::from_secs(1),  
             messages: Vec::new(),
             responses: Vec::new(),
         }
@@ -62,6 +67,23 @@ impl ChatBot {
 
         self.responses.push(response);
         Ok(())
+    }
+
+    fn retry_send_message(&mut self, role: &str, message: &str) -> reqwest::Result<()> 
+    {
+        for i in 0..=self.n_retries {
+            match self.send_message(role, message) {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if i == self.n_retries {
+                        panic!("Failed after {} retries with error: {}", self.n_retries, e);
+                    } else {
+                        std::thread::sleep(self.retry_delay);
+                    }
+                }
+            }
+        }
+        unreachable!();
     }
 }
 
@@ -130,7 +152,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let system_instruction = get_user_input();
 
     if system_instruction != "" {
-        chatbot.send_message("system", system_instruction.as_str())?;
+        chatbot.retry_send_message("system", system_instruction.as_str())?;
     }
 
     loop {
@@ -141,7 +163,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             break;
         }
 
-        chatbot.send_message("user", input.as_str())?;
+        chatbot.retry_send_message("user", input.as_str())?;
         let response = get_response_content(chatbot.responses.last().unwrap()).unwrap();
         println!("{}", response.blue());
     }
