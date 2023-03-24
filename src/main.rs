@@ -8,11 +8,22 @@ use std::error::Error;
 use std::io::{self, Write};
 use std::time::Duration;
 
+fn get_response_content(response: &Response) -> Option<&str> {
+    if response.choices.len() >= 1 {
+        response
+            .choices
+            .first() // Get a reference to the first choice
+            .map(|choice| choice.message.content.trim()) // Get the content string and trim whitespace
+    } else {
+        panic!("Empty response");
+    }
+}
+
 struct ChatBot {
     api_key: String,
     client: Client,
     headers: HeaderMap,
-    n_retries: u32, 
+    n_retries: u32,
     retry_delay: Duration,
     messages: Vec<Message>,
     responses: Vec<Response>,
@@ -28,8 +39,8 @@ impl ChatBot {
             api_key,
             client,
             headers,
-            n_retries: 3, 
-            retry_delay: Duration::from_secs(1),  
+            n_retries: 3,
+            retry_delay: Duration::from_secs(1),
             messages: Vec::new(),
             responses: Vec::new(),
         }
@@ -66,10 +77,10 @@ impl ChatBot {
                     role: Some(String::from("assistant")),
                     content: (x.to_string()),
                 });
-            },
+            }
             None => {
                 println!("Response contained nothing");
-            },
+            }
         }
 
         self.messages.push(Message {
@@ -81,8 +92,7 @@ impl ChatBot {
         Ok(())
     }
 
-    fn retry_send_message(&mut self, role: &str, message: &str) -> reqwest::Result<()> 
-    {
+    fn retry_send_message(&mut self, role: &str, message: &str) -> reqwest::Result<()> {
         for i in 0..=self.n_retries {
             match self.send_message(role, message) {
                 Ok(_) => return Ok(()),
@@ -96,6 +106,20 @@ impl ChatBot {
             }
         }
         unreachable!();
+    }
+
+    fn get_latest_response(&self) -> Option<&str> {
+        if let Some(last) = self.responses.last() {
+            if last.choices.len() >= 1 {
+                last.choices
+                    .first() // Get a reference to the first choice
+                    .map(|choice| choice.message.content.trim()) // Get the content string and trim whitespace
+            } else {
+                return None;
+            }
+        } else {
+            panic!("No responses found");
+        }
     }
 }
 
@@ -116,7 +140,9 @@ struct Response {
     id: Option<String>,
     object: Option<String>,
     created: Option<i64>,
+    #[serde(default)]
     choices: Vec<Choice>,
+    #[serde(default)]
     usage: Usage,
 }
 
@@ -127,22 +153,11 @@ struct Choice {
     finish_reason: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 struct Usage {
     prompt_tokens: usize,
     completion_tokens: usize,
     total_tokens: usize,
-}
-
-fn get_response_content(response: &Response) -> Option<&str> {
-    if response.choices.len() >= 1 {
-        response
-            .choices
-            .first() // Get a reference to the first choice
-            .map(|choice| choice.message.content.trim()) // Get the content string and trim whitespace
-    } else{
-        return None;
-    }
 }
 
 fn get_user_input() -> String {
@@ -180,8 +195,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         chatbot.retry_send_message("user", input.as_str())?;
-        let response = get_response_content(chatbot.responses.last().unwrap()).unwrap();
-        println!("{}", response.blue());
+        let response = chatbot.get_latest_response();
+
+        if let Some(answer) = response {
+            println!("{}", answer.blue());
+        } else {
+            println!("{}", "No response found".red());
+        }
     }
 
     Ok(())
