@@ -94,21 +94,12 @@ impl ChatBot {
             .send()?
             .json::<Response>()?;
 
-
-        // add the assistant response to the conversation
-        let response_content = response
-            .choices
-            .first() 
-            .map(|choice| choice.message.content
-            .trim()
-            .trim_end_matches('\n')); 
+        self.responses.push(response);
 
         self.messages.push(Message {
             role: Some(String::from("assistant")),
-            content: (response_content.unwrap().to_string()),
+            content: (self.get_latest_response().unwrap().to_string()),
         });
-
-        self.responses.push(response);
 
         Ok(())
     }
@@ -130,19 +121,14 @@ impl ChatBot {
     }
 
     fn get_latest_response(&self) -> Option<&str> {
-        if let Some(last) = self.responses.last() {
-            if last.choices.len() >= 1 {
-                last.choices
-                    .first() // Get a reference to the first choice
-                    .map(|choice| choice.message.content
-                    .trim()
-                    .trim_end_matches('\n')) 
-            } else {
-                return None;
-            }
-        } else {
-            panic!("No responses found");
-        }
+        self.responses
+            .last() 
+            .unwrap()
+            .choices
+            .first() 
+            .map(|choice| choice.message.content
+            .trim()
+            .trim_end_matches('\n'))
     }
 }
 
